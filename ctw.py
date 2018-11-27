@@ -65,7 +65,6 @@ class Encoder():
   def __init__(self, f):
     self.l = 0
     self.h = 1
-    self.d = 1
     self.sd = 0
     self.ob = []
 
@@ -79,7 +78,6 @@ class Encoder():
     # ok to multiply all by 256
     self.l *= 256
     self.h *= 256
-    self.d *= 256
     self.sd += 8
 
     if x == 0:
@@ -88,25 +86,24 @@ class Encoder():
       self.l += pn_0
 
     # reduce fractions
-    while self.l%2 == 0 and self.h%2 == 0 and self.d%2 == 0:
+    while self.l%2 == 0 and self.h%2 == 0:
       self.l //= 2
       self.h //= 2
-      self.d //= 2
       self.sd -= 1
 
     # output bit
     #print(hex(self.l), hex(self.h), hex(self.d))
-    sr = self.sd
-    if sr > 8:
-      lb = self.l >> (sr-8)
-      hb = self.h >> (sr-8)
+    while self.sd > 8:
+      lb = self.l >> (self.sd-8)
+      hb = self.h >> (self.sd-8)
       if lb == hb:
         #print("output", hex(lb))
         self.ob.append(lb)
-        self.l -= lb << (sr-8)
-        self.h -= lb << (sr-8)
-        self.d //= 256
+        self.l -= lb << (self.sd-8)
+        self.h -= lb << (self.sd-8)
         self.sd -= 8
+      else:
+        break
 
 
 enc = Encoder(open("enwik4.out", "wb"))
