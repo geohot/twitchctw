@@ -70,8 +70,11 @@ class Encoder():
     self.ob = []
 
   def code(self, p_0, x):
+    assert self.l < self.h
+
     # this is implied times 256
-    pn = p_0 * (self.h - self.l)
+    pn_0 = p_0 * (self.h - self.l)
+    pn_1 = (256 - p_0) * (self.h - self.l)
 
     # ok to multiply all by 256
     self.l *= 256
@@ -80,9 +83,9 @@ class Encoder():
     self.sd += 8
 
     if x == 0:
-      self.h -= pn
+      self.h -= pn_1
     else:
-      self.l += pn
+      self.l += pn_0
 
     # reduce fractions
     while self.l%2 == 0 and self.h%2 == 0 and self.d%2 == 0:
@@ -92,17 +95,18 @@ class Encoder():
       self.sd -= 1
 
     # output bit
+    #print(hex(self.l), hex(self.h), hex(self.d))
     sr = self.sd
     if sr > 8:
       lb = self.l >> (sr-8)
       hb = self.h >> (sr-8)
       if lb == hb:
+        #print("output", hex(lb))
         self.ob.append(lb)
         self.l -= lb << (sr-8)
         self.h -= lb << (sr-8)
-        self.d /= 256
+        self.d //= 256
         self.sd -= 8
-    #print(hex(self.l), hex(self.h))
 
 
 enc = Encoder(open("enwik4.out", "wb"))
@@ -129,7 +133,7 @@ try:
     prevx.append(x)
     prevx = prevx[-NUMBER_OF_BITS-1:]
     if cnt % 5000 == 0:
-      print("ratio %.2f%%, %d nodes, %f bytes, %f realbytes" % (H*100.0/cnt, len(nodes), H/8.0, len(enc.ob)))
+      print("ratio %.2f%%, %d nodes, %f bytes, %d realbytes" % (H*100.0/cnt, len(nodes), H/8.0, len(enc.ob)))
 except StopIteration:
   pass
 
