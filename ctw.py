@@ -19,7 +19,9 @@ from collections import defaultdict
 
 NUMBER_OF_BITS = 16
 
-lookup = defaultdict(lambda: [1,2])
+# https://en.wikipedia.org/wiki/Krichevsky–Trofimov_estimator
+lookup = defaultdict(lambda: [0.5,1.0])
+
 bg = bitgen(enw)
 HH = 0.0
 try:
