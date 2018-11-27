@@ -17,7 +17,7 @@ def bitgen(x):
 
 from collections import defaultdict
 
-NUMBER_OF_BITS = 16
+NUMBER_OF_BITS = 8
 
 nodes = []
 class Node():
@@ -64,10 +64,46 @@ def quantize(x):
 class Encoder():
   def __init__(self, f):
     self.l = 0
-    self.h = 256
+    self.h = 1
+    self.d = 1
+    self.sd = 0
+    self.ob = []
 
-  def code(self, p, x):
-    print(p, x)
+  def code(self, p_0, x):
+    # this is implied times 256
+    pn = p_0 * (self.h - self.l)
+
+    # ok to multiply all by 256
+    self.l *= 256
+    self.h *= 256
+    self.d *= 256
+    self.sd += 8
+
+    if x == 0:
+      self.h -= pn
+    else:
+      self.l += pn
+
+    # reduce fractions
+    while self.l%2 == 0 and self.h%2 == 0 and self.d%2 == 0:
+      self.l //= 2
+      self.h //= 2
+      self.d //= 2
+      self.sd -= 1
+
+    # output bit
+    sr = self.sd
+    if sr > 8:
+      lb = self.l >> (sr-8)
+      hb = self.h >> (sr-8)
+      if lb == hb:
+        self.ob.append(lb)
+        self.l -= lb << (sr-8)
+        self.h -= lb << (sr-8)
+        self.d /= 256
+        self.sd -= 8
+    #print(hex(self.l), hex(self.h))
+
 
 enc = Encoder(open("enwik4.out", "wb"))
 
@@ -83,6 +119,8 @@ try:
 
     # finite precision bro
     p_0 = root.getp(prevx, 0)
+    enc.code(quantize(p_0), x)
+
     p_x = p_0 if x == 0 else (1.0 - p_0)
     H += -math.log2(p_x)
 
@@ -91,7 +129,7 @@ try:
     prevx.append(x)
     prevx = prevx[-NUMBER_OF_BITS-1:]
     if cnt % 5000 == 0:
-      print("ratio %.2f%%, %d nodes" % (H*100.0/cnt, len(nodes)))
+      print("ratio %.2f%%, %d nodes, %f bytes, %f realbytes" % (H*100.0/cnt, len(nodes), H/8.0, len(enc.ob)))
 except StopIteration:
   pass
 
