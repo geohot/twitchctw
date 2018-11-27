@@ -17,7 +17,7 @@ def bitgen(x):
 
 from collections import defaultdict
 
-NUMBER_OF_BITS = 9
+NUMBER_OF_BITS = 24
 
 nodes = []
 class Node():
@@ -50,9 +50,11 @@ class Node():
 root = Node()
 bg = bitgen(enw)
 H = 0.0
+cnt = 0 
 try:
   prevx = [0]*(NUMBER_OF_BITS+1)
   while 1:
+    cnt += 1
     x = next(bg)
 
     p_x = root.getp(prevx)
@@ -62,6 +64,9 @@ try:
     prevx.append(x)
     prevx = prevx[-NUMBER_OF_BITS-1:]
     root.add(prevx)
+    if cnt % 5000 == 0:
+      print("ratio %.2f%%, %d nodes" % (H*100.0/cnt, len(nodes)))
+
 except StopIteration:
   pass
 
@@ -74,9 +79,11 @@ print("%.2f bytes of entropy, %d nodes" % (H/8.0, len(nodes)))
 lookup = defaultdict(lambda: [0,0])
 bg = bitgen(enw)
 H = 0.0
+cnt = 0 
 try:
   prevx = [0]*NUMBER_OF_BITS
   while 1:
+    cnt += 1
     x = next(bg)
 
     # use tables
