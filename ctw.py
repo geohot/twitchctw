@@ -15,78 +15,67 @@ def bitgen(x):
     for i in range(8):
       yield int((c & (0x80>>i)) != 0)
 
-def setgen(x, l):
-  bg = bitgen(x)
-  ret = []
-  while 1:
-    ret.append(next(bg))
-    ret = ret[-l:]
-    if len(ret) == l:
-      yield ret
-
-
 from collections import defaultdict
 
-NUMBER_OF_BITS = 4
+NUMBER_OF_BITS = 9
 
-# https://en.wikipedia.org/wiki/Krichevsky–Trofimov_estimator
-lookup = defaultdict(lambda: [0.5,1.0])
-
-sg = setgen(enw, NUMBER_OF_BITS)
-
-#bg = bitgen(enw)
-
-# 10101
-# 010101
-# 110101
-
-ncount = 0
-
+nodes = []
 class Node():
   def __init__(self):
-    global ncount
+    global nodes
     self.c = [0,0]
     self.n = [None, None]
-    ncount += 1
+    nodes.append(self)
 
-  def getp1(self, x):
-    if self.n[0] is not None and self.n[1] is not None:
-      return self.n[x[-1]].getp1(x[:-1])
-    return (self.c[1] + 0.5) / (self.c[0] + self.c[1] + 1)
+  def __str__(self):
+    return "[%d,%d]" % (self.c[0], self.c[1])
+    
+  def getp(self, x):
+    np = (self.c[x[-1]] + 0.5) / (self.c[0] + self.c[1] + 1)
+    if self.n[x[-1]] is not None:
+      return self.n[x[-1]].getp(x[:-1])
+      #return 0.5 * np + 0.5 * self.n[x[-1]].getp(x[:-1])
+    return np
 
   def add(self, x):
     t = x[-1]
     self.c[t] += 1
     if x[:-1] == []:
+      # if there's no more string, don't make more nodes
       return
     if self.n[t] is None:
       self.n[t] = Node()
     self.n[t].add(x[:-1])
 
 root = Node()
-
+bg = bitgen(enw)
 H = 0.0
-cnt = 0
 try:
+  prevx = [0]*(NUMBER_OF_BITS+1)
   while 1:
-    cnt += 1
-    x = next(sg)
-    p_1 = root.getp1(x)
-    p_x = p_1 if x[-1] == 1 else 1.0 - p_1
+    x = next(bg)
+
+    p_x = root.getp(prevx)
     H += -math.log2(p_x)
-    if cnt%3000 == 0:
-      print("%.2f%% packed, %d nodes" % ((H*100.0)/cnt, ncount))
-    root.add(x)
+
+    # increment tables
+    prevx.append(x)
+    prevx = prevx[-NUMBER_OF_BITS-1:]
+    root.add(prevx)
 except StopIteration:
   pass
 
-print("%.2f bytes of entropy" % (H/8.0))
+print("%.2f bytes of entropy, %d nodes" % (H/8.0, len(nodes)))
+#for n in nodes:
+#  print(n)
 
-exit(0)
+#exit(0)
 
-HH = 0.0
+lookup = defaultdict(lambda: [0,0])
+bg = bitgen(enw)
+H = 0.0
 try:
-  prevx = [-1]*NUMBER_OF_BITS
+  prevx = [0]*NUMBER_OF_BITS
   while 1:
     x = next(bg)
 
@@ -94,20 +83,19 @@ try:
     px = tuple(prevx)
 
     # lookup[px] = P(x_i == 1 | x_i-5:i-1)
-    p_1 = lookup[px][0] / lookup[px][1]
-    p_x = p_1 if x == 1 else 1.0 - p_1
-
-    #H = -(p_0*math.log2(p_0) + p_1*math.log2(p_1))
-
+    # https://en.wikipedia.org/wiki/Krichevsky–Trofimov_estimator
+    p_x = (lookup[px][x] + 0.5) / (lookup[px][0] + lookup[px][1] + 1)
     H += -math.log2(p_x)
 
     # increment tables
-    lookup[px][0] += x == 1
-    lookup[px][1] += 1
+    lookup[px][x] += 1
     prevx.append(x)
     prevx = prevx[-NUMBER_OF_BITS:]
 
 except StopIteration:
   pass
+
+#print(lookup)
+print("%.2f bytes of entropy" % (H/8.0))
 
 
