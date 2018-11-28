@@ -19,7 +19,7 @@ class Coder():
       if len(self.ob) < 4:
         raise StopIteration
       x = (self.ob[0]<<24) | (self.ob[1]<<16) | (self.ob[2]<<8) | self.ob[3]
-      x = int(x > split)
+      x = int(x >= split)
 
     if x == 0:
       self.h = split
@@ -28,6 +28,7 @@ class Coder():
 
     while self.l>>24 == self.h>>24:
       if decode:
+        assert self.ob[0] == self.l >> 24
         self.ob = self.ob[1:]
       else:
         self.ob.append(self.l >> 24)

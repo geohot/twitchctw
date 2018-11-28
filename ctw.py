@@ -74,7 +74,6 @@ def run(compress=True):
     while 1:
       cnt += 1
 
-      # finite precision bro
       p_0 = root.getp(prevx, 0)
 
       if compress:
@@ -93,6 +92,10 @@ def run(compress=True):
       prevx = prevx[-NUMBER_OF_BITS-1:]
       if cnt % 5000 == 0:
         print("ratio %.2f%%, %d nodes, %f bytes" % (H*100.0/cnt, len(nodes), H/8.0))
+
+      # TODO: make this generic
+      if cnt == 80000:
+        break
   except StopIteration:
     pass
 
@@ -101,6 +104,7 @@ def run(compress=True):
   if compress:
     with open("enwik4.out", "wb") as f:
       f.write(bytes(enc.ob))
+      f.write(bytes(enc.l>>24))
   else:
     ob = []
     for i in range(0, len(stream), 8):
@@ -111,7 +115,7 @@ def run(compress=True):
         rr |= j
       ob.append(rr)
     with open("enwik4.dec", "wb") as f:
-      f.write(bytes(ob)[0:10000])
+      f.write(bytes(ob))
 
 if __name__ == "__main__":
   run()
