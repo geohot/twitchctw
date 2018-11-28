@@ -62,6 +62,8 @@ class Coder():
 
   def decode(self, p_0):
     assert self.l <= self.h
+    assert self.l >= 0 and self.l < 0x100000000
+    assert self.h >= 0 and self.h < 0x100000000
 
     p_0 = int(254*p_0 + 1)
     split = self.l + (((self.h - self.l)*p_0) >> 8)
@@ -72,10 +74,10 @@ class Coder():
     x = (self.ob[0]<<24) | (self.ob[1]<<16) | (self.ob[2]<<8) | self.ob[3]
 
     if x <= split:
-      ret = 1
+      ret = 0
       self.h = split
     else:
-      ret = 0
+      ret = 1
       self.l = split + 1
 
     while self.l>>24 == self.h>>24:
@@ -87,6 +89,8 @@ class Coder():
 
   def code(self, p_0, x):
     assert self.l <= self.h
+    assert self.l >= 0 and self.l < 0x100000000
+    assert self.h >= 0 and self.h < 0x100000000
 
     # key insight, the precision doesn't have to be perfect
     # just the sqme on encode and decode
@@ -106,11 +110,14 @@ class Coder():
       self.h = ((self.h & 0xFFFFFF) << 8) | 0xFF
 
 def run(compress=True):
+  global nodes
+
   if compress:
     enc = Coder()
   else:
     dec = Coder(open("enwik4.out", "rb").read())
 
+  nodes = []
   root = Node()
   bg = bitgen(enw)
   H = 0.0
@@ -143,16 +150,11 @@ def run(compress=True):
   except StopIteration:
     pass
 
-  print("%.2f bytes of entropy, %d nodes" % (H/8.0, len(nodes)))
-  #for n in nodes:
-  #  print(n)
+  print("%.2f bytes of entropy, %d nodes, %d bits" % (H/8.0, len(nodes), len(stream)))
 
   if compress:
     with open("enwik4.out", "wb") as f:
       f.write(bytes(enc.ob))
-  else:
-    print(len(stream), "bits")
-
 
 run()
 run(False)
