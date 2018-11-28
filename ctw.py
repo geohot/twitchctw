@@ -93,7 +93,7 @@ class Coder():
     assert self.h >= 0 and self.h < 0x100000000
 
     # key insight, the precision doesn't have to be perfect
-    # just the sqme on encode and decode
+    # just the same on encode and decode
     p_0 = int(254*p_0 + 1)
     split = self.l + (((self.h - self.l)*p_0) >> 8)
 
@@ -165,7 +165,7 @@ def run(compress=True):
         rr |= j
       ob.append(rr)
     with open("enwik4.dec", "wb") as f:
-      f.write(bytes(ob))
+      f.write(bytes(ob)[0:10000])
 
 run()
 run(False)
