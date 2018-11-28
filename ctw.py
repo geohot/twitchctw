@@ -1,4 +1,5 @@
 #!/usr/bin/env python3 
+import sys
 import math
 
 # P(x_i == 1 | x_0:i-1)
@@ -118,6 +119,8 @@ def run(fn="enwik4", compress=True):
       f.write(bytes(ob))
 
 if __name__ == "__main__":
-  run("enwik4")
-  run("enwik4", False)
+  if sys.argv[1] == "x":
+    run(sys.argv[2], False)
+  if sys.argv[1] == "c":
+    run(sys.argv[2])
 
