@@ -18,21 +18,27 @@ class Coder():
     if decode:
       if len(self.ob) < 4:
         raise StopIteration
-      x = (self.ob[0]<<24) | (self.ob[1]<<16) | (self.ob[2]<<8) | self.ob[3]
-      x = int(x >= split)
+      bob = (self.ob[0]<<24) | (self.ob[1]<<16) | (self.ob[2]<<8) | self.ob[3]
+      #print("%8x" % bob)
+      x = int(bob >= split)
 
     if x == 0:
       self.h = split
     else:
       self.l = split + 1
 
+    #print("%d -- %8x %8x -- %8x" % (x, self.l, self.h, split)) 
+
     while self.l>>24 == self.h>>24:
       if decode:
         assert self.ob[0] == self.l >> 24
         self.ob = self.ob[1:]
       else:
+        assert (self.l >> 24) < 256
         self.ob.append(self.l >> 24)
+      #print("shift %X" % (self.l >> 24))
       self.l = ((self.l & 0xFFFFFF) << 8)
       self.h = ((self.h & 0xFFFFFF) << 8) | 0xFF
+
     return x
 

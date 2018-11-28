@@ -8,7 +8,6 @@ import math
 
 # enwik4: 10000 -> 3728
 
-enw = open("enwik4", "rb").read()
 
 def bitgen(x):
   for c in x:
@@ -55,17 +54,18 @@ class Node():
 
 from coder import Coder
 
-def run(compress=True):
+def run(fn="enwik4", compress=True):
   global nodes
 
   if compress:
+    enw = open(fn, "rb").read()
+    bg = bitgen(enw)
     enc = Coder()
   else:
-    dec = Coder(open("enwik4.out", "rb").read())
+    dec = Coder(open(fn+".out", "rb").read())
 
   nodes = []
   root = Node()
-  bg = bitgen(enw)
   H = 0.0
   cnt = 0 
   stream = []
@@ -94,7 +94,7 @@ def run(compress=True):
         print("ratio %.2f%%, %d nodes, %f bytes" % (H*100.0/cnt, len(nodes), H/8.0))
 
       # TODO: make this generic
-      if cnt == 80000:
+      if not compress and cnt == 80000:
         break
   except StopIteration:
     pass
@@ -102,9 +102,9 @@ def run(compress=True):
   print("%.2f bytes of entropy, %d nodes, %d bits" % (H/8.0, len(nodes), len(stream)))
 
   if compress:
-    with open("enwik4.out", "wb") as f:
+    with open(fn+".out", "wb") as f:
       f.write(bytes(enc.ob))
-      f.write(bytes(enc.l>>24))
+      f.write(bytes([enc.h>>24, 0, 0, 0]))
   else:
     ob = []
     for i in range(0, len(stream), 8):
@@ -114,10 +114,10 @@ def run(compress=True):
         rr <<= 1
         rr |= j
       ob.append(rr)
-    with open("enwik4.dec", "wb") as f:
+    with open(fn+".dec", "wb") as f:
       f.write(bytes(ob))
 
 if __name__ == "__main__":
-  run()
-  run(False)
+  run("enwik4")
+  run("enwik4", False)
 
