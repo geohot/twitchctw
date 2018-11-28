@@ -9,6 +9,12 @@ import math
 
 # enwik4: 10000 -> 3728
 
+def clip(x, mn, mx):
+  if x < mn:
+    x = mn
+  if x > mx:
+    x = mx
+  return x
 
 def bitgen(x):
   for c in x:
@@ -17,42 +23,37 @@ def bitgen(x):
 
 from collections import defaultdict
 
-NUMBER_OF_BITS = 8
+NUMBER_OF_BITS = 32
 
 nodes = []
 class Node():
-  def __init__(self):
+  def __init__(self, parent=None):
     global nodes
     self.c = [0,0]
-    self.n = [None, None]
+    self.pe = 1
+    self.n = None
+    self.parent = parent
     nodes.append(self)
 
   def __str__(self):
     return "[%d,%d]" % (self.c[0], self.c[1])
+
+  def find(self, prevx, create=False):
+    if prevx == []:
+      return self
+    if self.n is None:
+      if create:
+        self.n = [Node(self), Node(self)]
+      else:
+        return self
+    return self.n[prevx[-1]].find(prevx[:-1], create)
+
+  def update(self, x):
+    self.c[x] += 1
+    self.pe *= (self.c[x] + 0.5) / (self.c[0] + self.c[1] + 1)
+    if self.parent is not None:
+      self.parent.update(x)
     
-  def getp_recurse(self, x, p):
-    np = (self.c[p] + 0.5) / (self.c[0] + self.c[1] + 1)
-    if x != [] and self.n[x[-1]] is not None:
-      ret = self.n[x[-1]].getp_recurse(x[:-1], p)
-      return ret + [np]
-    return [np]
-
-  def getp(self, x, p):
-    l = self.getp_recurse(x, p)
-    ret = l[-1]
-    for x in l[:-1][::-1]:
-      ret = 0.5 * ret + 0.5*x
-    return ret
-
-  def add(self, x, p):
-    self.c[p] += 1
-    if x == []:
-      return
-    t = x[-1]
-    if self.n[t] is None:
-      self.n[t] = Node()
-    self.n[t].add(x[:-1], p)
-
 from coder import Coder
 
 def run(fn="enwik4", compress=True):
@@ -75,8 +76,10 @@ def run(fn="enwik4", compress=True):
     while 1:
       cnt += 1
 
-      p_0 = root.getp(prevx, 0)
+      pn = root.find(prevx)
+      #print(pn)
 
+      p_0 = (pn.c[0] + 0.5) / (pn.c[0] + pn.c[1] + 1.0)
       if compress:
         x = next(bg)
         enc.code(p_0, x)
@@ -88,7 +91,9 @@ def run(fn="enwik4", compress=True):
       H += -math.log2(p_x)
 
       # increment tables
-      root.add(prevx, x)
+      tn = root.find(prevx, create=True)
+      tn.update(x)
+
       prevx.append(x)
       prevx = prevx[-NUMBER_OF_BITS-1:]
       if cnt % 5000 == 0:
