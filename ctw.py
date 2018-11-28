@@ -53,90 +53,109 @@ class Node():
       self.n[t] = Node()
     self.n[t].add(x[:-1], p)
 
-def quantize(x):
-  x = int(x*256.0 + 0.5)
-  if x == 0:  
-    x = 1
-  if x == 255:
-    x = 254
-  return x
 
-class Encoder():
-  def __init__(self, f):
+class Coder():
+  def __init__(self, ob=[]):
     self.l = 0
-    self.h = 1
-    self.sd = 0
-    self.ob = []
+    self.h = 0xffffffff
+    self.ob = ob
+
+  def decode(self, p_0):
+    assert self.l <= self.h
+
+    p_0 = int(254*p_0 + 1)
+    split = self.l + (((self.h - self.l)*p_0) >> 8)
+
+    if len(self.ob) < 4:
+      raise StopIteration
+
+    x = (self.ob[0]<<24) | (self.ob[1]<<16) | (self.ob[2]<<8) | self.ob[3]
+
+    if x <= split:
+      ret = 1
+      self.h = split
+    else:
+      ret = 0
+      self.l = split + 1
+
+    while self.l>>24 == self.h>>24:
+      self.ob = self.ob[1:]
+      self.l = ((self.l & 0xFFFFFF) << 8)
+      self.h = ((self.h & 0xFFFFFF) << 8) | 0xFF
+
+    return ret
 
   def code(self, p_0, x):
-    assert self.l < self.h
+    assert self.l <= self.h
 
-    # this is implied times 256
-    pn_0 = p_0 * (self.h - self.l)
-    pn_1 = (256 - p_0) * (self.h - self.l)
-
-    # ok to multiply all by 256
-    self.l *= 256
-    self.h *= 256
-    self.sd += 8
+    # key insight, the precision doesn't have to be perfect
+    # just the sqme on encode and decode
+    p_0 = int(254*p_0 + 1)
+    split = self.l + (((self.h - self.l)*p_0) >> 8)
 
     if x == 0:
-      self.h -= pn_1
+      self.h = split
     else:
-      self.l += pn_0
+      self.l = split + 1
 
-    # reduce fractions
-    while self.l%2 == 0 and self.h%2 == 0:
-      self.l //= 2
-      self.h //= 2
-      self.sd -= 1
+    while self.l>>24 == self.h>>24:
+      b = self.l>>24
+      assert b>=0 and b<256
+      self.ob.append(b)
+      self.l = ((self.l & 0xFFFFFF) << 8)
+      self.h = ((self.h & 0xFFFFFF) << 8) | 0xFF
 
-    # output bit
-    #print(hex(self.l), hex(self.h), hex(self.d))
-    while self.sd > 8:
-      lb = self.l >> (self.sd-8)
-      hb = self.h >> (self.sd-8)
-      if lb == hb:
-        #print("output", hex(lb))
-        self.ob.append(lb)
-        self.l -= lb << (self.sd-8)
-        self.h -= lb << (self.sd-8)
-        self.sd -= 8
+def run(compress=True):
+  if compress:
+    enc = Coder()
+  else:
+    dec = Coder(open("enwik4.out", "rb").read())
+
+  root = Node()
+  bg = bitgen(enw)
+  H = 0.0
+  cnt = 0 
+  stream = []
+  try:
+    prevx = [0]*(NUMBER_OF_BITS+1)
+    while 1:
+      cnt += 1
+
+      # finite precision bro
+      p_0 = root.getp(prevx, 0)
+
+      if compress:
+        x = next(bg)
+        enc.code(p_0, x)
       else:
-        break
+        x = dec.decode(p_0)
+      stream.append(x)
+
+      p_x = p_0 if x == 0 else (1.0 - p_0)
+      H += -math.log2(p_x)
+
+      # increment tables
+      root.add(prevx, x)
+      prevx.append(x)
+      prevx = prevx[-NUMBER_OF_BITS-1:]
+      if cnt % 5000 == 0:
+        print("ratio %.2f%%, %d nodes, %f bytes" % (H*100.0/cnt, len(nodes), H/8.0))
+  except StopIteration:
+    pass
+
+  print("%.2f bytes of entropy, %d nodes" % (H/8.0, len(nodes)))
+  #for n in nodes:
+  #  print(n)
+
+  if compress:
+    with open("enwik4.out", "wb") as f:
+      f.write(bytes(enc.ob))
+  else:
+    print(len(stream), "bits")
 
 
-enc = Encoder(open("enwik4.out", "wb"))
-
-root = Node()
-bg = bitgen(enw)
-H = 0.0
-cnt = 0 
-try:
-  prevx = [0]*(NUMBER_OF_BITS+1)
-  while 1:
-    cnt += 1
-    x = next(bg)
-
-    # finite precision bro
-    p_0 = root.getp(prevx, 0)
-    enc.code(quantize(p_0), x)
-
-    p_x = p_0 if x == 0 else (1.0 - p_0)
-    H += -math.log2(p_x)
-
-    # increment tables
-    root.add(prevx, x)
-    prevx.append(x)
-    prevx = prevx[-NUMBER_OF_BITS-1:]
-    if cnt % 5000 == 0:
-      print("ratio %.2f%%, %d nodes, %f bytes, %d realbytes" % (H*100.0/cnt, len(nodes), H/8.0, len(enc.ob)))
-except StopIteration:
-  pass
-
-print("%.2f bytes of entropy, %d nodes" % (H/8.0, len(nodes)))
-#for n in nodes:
-#  print(n)
+run()
+run(False)
 
 exit(0)
 
