@@ -24,7 +24,7 @@ def bitgen(x):
 
 from collections import defaultdict
 
-NUMBER_OF_BITS = 8
+NUMBER_OF_BITS = 128
 
 nodes = []
 class Node():
@@ -49,16 +49,21 @@ class Node():
         return self
     return self.n[prevx[-1]].find(prevx[:-1], create)
 
-  def update(self, x):
-    self.c[x] += 1
-    self.pe += np.log(self.c[x]+0.5) - np.log(self.c[0]+self.c[1]+1.0)
+  def update(self, x, reverse=False):
+    if reverse == False:
+      self.pe += np.log(self.c[x]+0.5) - np.log(self.c[0]+self.c[1]+1.0)
+      self.c[x] += 1
+    else:
+      self.c[x] -= 1
+      self.pe -= np.log(self.c[x]+0.5) - np.log(self.c[0]+self.c[1]+1.0)
+
+    # propagate
     if self.n is not None:
       self.pw = np.log(0.5) + np.logaddexp(self.pe, self.n[0].pw + self.n[1].pw)
     else:
       self.pw = self.pe
-
     if self.parent is not None:
-      self.parent.update(x)
+      self.parent.update(x, reverse)
     
 from coder import Coder
 
@@ -84,7 +89,13 @@ def run(fn="enwik4", compress=True):
 
       #print(root.pw)
       pn = root.find(prevx)
-      p_0 = (pn.c[0] + 0.5) / (pn.c[0] + pn.c[1] + 1.0)
+
+      # what if a wild 0 appeared? this is wrong because creation might happen...
+      prev = pn.pw
+      pn.update(0)
+      after = pn.pw
+      pn.update(0, True)
+      p_0 = np.exp(after - prev)
 
       if compress:
         x = next(bg)
@@ -104,7 +115,7 @@ def run(fn="enwik4", compress=True):
       prevx = prevx[-NUMBER_OF_BITS-1:]
       if cnt % 5000 == 0:
         ctw_bytes = (root.pw/np.log(2))/-8
-        print("ratio %.2f%%, %d nodes, %.2f bytes, %.2f ctw" % (H*100.0/cnt, len(nodes), H/8.0, ctw_bytes))
+        print("%5d: ratio %.2f%%, %d nodes, %.2f bytes, %.2f ctw" % (cnt//8, H*100.0/cnt, len(nodes), H/8.0, ctw_bytes))
 
       # TODO: make this generic
       if not compress and cnt == 80000:
@@ -112,7 +123,7 @@ def run(fn="enwik4", compress=True):
   except StopIteration:
     pass
 
-  print("%.2f bytes of entropy, %d nodes, %d bits" % (H/8.0, len(nodes), len(stream)))
+  print("%.2f bytes of entropy, %d nodes, %d bits, %d bytes" % (H/8.0, len(nodes), len(stream), len(enc.ob)))
 
   if compress:
     with open(fn+".out", "wb") as f:
