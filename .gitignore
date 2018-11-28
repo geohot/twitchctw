@@ -3,3 +3,4 @@ enwik8
 *.dec
 *.out
 .*.swp
+__pycache__

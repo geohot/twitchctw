@@ -53,43 +53,7 @@ class Node():
       self.n[t] = Node()
     self.n[t].add(x[:-1], p)
 
-
-class Coder():
-  def __init__(self, ob=[]):
-    self.l = 0
-    self.h = 0xffffffff
-    self.ob = ob
-
-  def code(self, p_0, x=None):
-    assert self.l <= self.h
-    assert self.l >= 0 and self.l < 0x100000000
-    assert self.h >= 0 and self.h < 0x100000000
-    decode = (x == None)
-
-    # key insight, the precision doesn't have to be perfect
-    # just the same on encode and decode
-    p_0 = int(254*p_0 + 1)
-    split = self.l + (((self.h - self.l)*p_0) >> 8)
-
-    if decode:
-      if len(self.ob) < 4:
-        raise StopIteration
-      x = (self.ob[0]<<24) | (self.ob[1]<<16) | (self.ob[2]<<8) | self.ob[3]
-      x = int(x > split)
-
-    if x == 0:
-      self.h = split
-    else:
-      self.l = split + 1
-
-    while self.l>>24 == self.h>>24:
-      if decode:
-        self.ob = self.ob[1:]
-      else:
-        self.ob.append(self.l >> 24)
-      self.l = ((self.l & 0xFFFFFF) << 8)
-      self.h = ((self.h & 0xFFFFFF) << 8) | 0xFF
-    return x
+from coder import Coder
 
 def run(compress=True):
   global nodes
@@ -149,42 +113,7 @@ def run(compress=True):
     with open("enwik4.dec", "wb") as f:
       f.write(bytes(ob)[0:10000])
 
-run()
-run(False)
-
-exit(0)
-
-lookup = defaultdict(lambda: [0,0])
-bg = bitgen(enw)
-H = 0.0
-cnt = 0 
-try:
-  prevx = [0]*NUMBER_OF_BITS
-  while 1:
-    cnt += 1
-    x = next(bg)
-
-    # use tables
-    px = tuple(prevx)
-
-    # lookup[px] = P(x_i == 1 | x_i-5:i-1)
-    # https://en.wikipedia.org/wiki/Krichevsky–Trofimov_estimator
-    p_x = (lookup[px][x] + 0.5) / (lookup[px][0] + lookup[px][1] + 1)
-    H += -math.log2(p_x)
-
-    # encode
-    #p_0 = (lookup[px][0] + 0.5) / (lookup[px][0] + lookup[px][1] + 1)
-    #enc.code(quantize(p_0), x)
-
-    # increment tables
-    lookup[px][x] += 1
-    prevx.append(x)
-    prevx = prevx[-NUMBER_OF_BITS:]
-
-except StopIteration:
-  pass
-
-#print(lookup)
-print("%.2f bytes of entropy" % (H/8.0))
-
+if __name__ == "__main__":
+  run()
+  run(False)
 
