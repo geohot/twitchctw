@@ -155,6 +155,17 @@ def run(compress=True):
   if compress:
     with open("enwik4.out", "wb") as f:
       f.write(bytes(enc.ob))
+  else:
+    ob = []
+    for i in range(0, len(stream), 8):
+      tb = stream[i:i+8]
+      rr = 0
+      for j in tb:
+        rr <<= 1
+        rr |= j
+      ob.append(rr)
+    with open("enwik4.dec", "wb") as f:
+      f.write(bytes(ob))
 
 run()
 run(False)

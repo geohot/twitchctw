@@ -1,4 +1,5 @@
 enwik6
 enwik8
+*.dec
 *.out
 .*.swp
