@@ -24,7 +24,7 @@ def bitgen(x):
 
 from collections import defaultdict
 
-NUMBER_OF_BITS = 128
+NUMBER_OF_BITS = 32
 
 nodes = []
 class Node():
@@ -34,6 +34,10 @@ class Node():
     self.n = None
     self.pe = self.pw = 0.0
     self.parent = parent
+    if self.parent is not None:
+      self.depth = self.parent.depth + 1
+    else:
+      self.depth = 0
     nodes.append(self)
 
   def __str__(self):
@@ -60,7 +64,10 @@ class Node():
     # propagate
     if self.n is not None:
       self.pw = np.log(0.5) + np.logaddexp(self.pe, self.n[0].pw + self.n[1].pw)
+    elif self.depth == NUMBER_OF_BITS:
+      self.pw = self.pe
     else:
+      #self.pw = np.log(0.5) + self.pe
       self.pw = self.pe
     if self.parent is not None:
       self.parent.update(x, reverse)
