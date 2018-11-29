@@ -3,3 +3,22 @@ CTW compressor. How long before we beat gzip
 gzip: 3728 bytes <-- not easy to beat actually
 xz:   3656 bytes
 
+
+## comparing to existing CTW implementations
+
+# https://github.com/cberzan/ctw.git ctw_baseline
+This is the authors imp?
+gets 3484, so CTW can do better than gzip
+
+Though this code has tons of hacks, notably MAXCOUNTS
+And I don't understand it's tree depth
+
+# https://github.com/fumin/ctw.git
+gets 4616, err, not good
+
+# https://github.com/gkassel/pyaixi
+CTW implementation seems numerically unstable...
+
+
+Maybe this isn't as easy as I thought...
+

@@ -3,6 +3,10 @@ import sys
 import math
 import numpy as np
 
+def logaddexp(a,b):
+  return np.logaddexp(a,b)
+  #return math.log(math.exp(a) + math.exp(b))
+
 # P(x_i == 1 | x_0:i-1)
 
 # enwik6: 1000000
@@ -24,7 +28,7 @@ def bitgen(x):
 
 from collections import defaultdict
 
-NUMBER_OF_BITS = 32
+NUMBER_OF_BITS = 5+6
 
 nodes = []
 class Node():
@@ -55,19 +59,16 @@ class Node():
 
   def update(self, x, reverse=False):
     if reverse == False:
-      self.pe += np.log(self.c[x]+0.5) - np.log(self.c[0]+self.c[1]+1.0)
+      self.pe += math.log(self.c[x]+0.5) - math.log(self.c[0]+self.c[1]+1.0)
       self.c[x] += 1
     else:
       self.c[x] -= 1
-      self.pe -= np.log(self.c[x]+0.5) - np.log(self.c[0]+self.c[1]+1.0)
+      self.pe -= math.log(self.c[x]+0.5) - math.log(self.c[0]+self.c[1]+1.0)
 
     # propagate
     if self.n is not None:
-      self.pw = np.log(0.5) + np.logaddexp(self.pe, self.n[0].pw + self.n[1].pw)
-    elif self.depth == NUMBER_OF_BITS:
-      self.pw = self.pe
+      self.pw = math.log(0.5) + logaddexp(self.pe, self.n[0].pw + self.n[1].pw)
     else:
-      #self.pw = np.log(0.5) + self.pe
       self.pw = self.pe
     if self.parent is not None:
       self.parent.update(x, reverse)
@@ -82,15 +83,16 @@ def run(fn="enwik4", compress=True):
     bg = bitgen(enw)
     enc = Coder()
   else:
-    dec = Coder(open(fn+".out", "rb").read())
+    enc = Coder(open(fn+".out", "rb").read())
 
   nodes = []
   root = Node()
+
   H = 0.0
   cnt = 0 
   stream = []
   try:
-    prevx = [0]*(NUMBER_OF_BITS+1)
+    prevx = [0]*NUMBER_OF_BITS
     while 1:
       cnt += 1
 
@@ -99,16 +101,24 @@ def run(fn="enwik4", compress=True):
 
       # what if a wild 0 appeared? this is wrong because creation might happen...
       prev = pn.pw
+
       pn.update(0)
-      after = pn.pw
+      after_0 = pn.pw
       pn.update(0, True)
-      p_0 = np.exp(after - prev)
+      p_0 = math.exp(after_0 - prev)
+
+      """
+      pn.update(1)
+      after_1 = pn.pw
+      pn.update(1, True)
+      p_1 = math.exp(after_1 - prev)
+      """
 
       if compress:
         x = next(bg)
         enc.code(p_0, x)
       else:
-        x = dec.code(p_0)
+        x = enc.code(p_0)
       stream.append(x)
 
       p_x = p_0 if x == 0 else (1.0 - p_0)
@@ -119,9 +129,9 @@ def run(fn="enwik4", compress=True):
       tn.update(x)
 
       prevx.append(x)
-      prevx = prevx[-NUMBER_OF_BITS-1:]
+      prevx = prevx[-NUMBER_OF_BITS:]
       if cnt % 5000 == 0:
-        ctw_bytes = (root.pw/np.log(2))/-8
+        ctw_bytes = (root.pw/math.log(2))/-8
         print("%5d: ratio %.2f%%, %d nodes, %.2f bytes, %.2f ctw" % (cnt//8, H*100.0/cnt, len(nodes), H/8.0, ctw_bytes))
 
       # TODO: make this generic
