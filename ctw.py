@@ -28,14 +28,14 @@ def bitgen(x):
 
 from collections import defaultdict
 
-NUMBER_OF_BITS = 5+6
+NUMBER_OF_BITS = 16
 
 nodes = []
 class Node():
-  def __init__(self, parent=None):
+  def __init__(self, parent=None, symbols=2):
     global nodes
-    self.c = [0,0]
-    self.n = None
+    self.c = [0]*symbols
+    self.n = [None]*symbols
     self.pe = self.pw = 0.0
     self.parent = parent
     if self.parent is not None:
@@ -50,26 +50,30 @@ class Node():
   def find(self, prevx, create=False):
     if prevx == []:
       return self
-    if self.n is None:
+    if self.n[prevx[-1]] is None:
       if create:
-        self.n = [Node(self), Node(self)]
+        self.n[prevx[-1]] = Node(self)
       else:
         return self
     return self.n[prevx[-1]].find(prevx[:-1], create)
 
   def update(self, x, reverse=False):
     if reverse == False:
-      self.pe += math.log(self.c[x]+0.5) - math.log(self.c[0]+self.c[1]+1.0)
+      self.pe += math.log(self.c[x]+0.5) - math.log(sum(self.c)+1.0)
       self.c[x] += 1
     else:
       self.c[x] -= 1
-      self.pe -= math.log(self.c[x]+0.5) - math.log(self.c[0]+self.c[1]+1.0)
+      self.pe -= math.log(self.c[x]+0.5) - math.log(sum(self.c)+1.0)
 
     # propagate
-    if self.n is not None:
-      self.pw = math.log(0.5) + logaddexp(self.pe, self.n[0].pw + self.n[1].pw)
-    else:
+    tpw = 0
+    for nn in self.n:
+      if nn is not None:
+        tpw += nn.pw
+    if tpw == 0:
       self.pw = self.pe
+    else:
+      self.pw = math.log(0.5) + logaddexp(self.pe, tpw)
     if self.parent is not None:
       self.parent.update(x, reverse)
     
@@ -97,7 +101,7 @@ def run(fn="enwik4", compress=True):
       cnt += 1
 
       #print(root.pw)
-      pn = root.find(prevx)
+      pn = root.find(prevx, True)
 
       # what if a wild 0 appeared? this is wrong because creation might happen...
       prev = pn.pw
