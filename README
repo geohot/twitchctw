@@ -22,6 +22,8 @@ gets 4616, err, not good
 # https://github.com/gkassel/pyaixi
 CTW implementation seems numerically unstable...
 
+# https://github.com/mgbellemare/SkipCTS/tree/master/python
+logprob of data is 2988 bytes with 16 context, haven't tried in compressor yet
 
 Maybe this isn't as easy as I thought...
 
