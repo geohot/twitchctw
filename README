@@ -27,3 +27,10 @@ logprob of data is 2988 bytes with 16 context, haven't tried in compressor yet
 
 Maybe this isn't as easy as I thought...
 
+Update
+===
+
+It is a working compressor (run ./test.sh) but it's performance is quite bad.
+
+Maybe it's bugs? One day we'll work through the proofs in the paper.
+
