@@ -16,12 +16,14 @@ from coder import Coder
 CTS = False
 
 def run(fn="enwik4", compress=True):
+  SYMBOLS = 256 if CTS else 2
+    
   if compress:
     enw = open(fn, "rb").read()
-    if CTS:
-      bg, SYMBOLS = bytegen(enw), 256
+    if SYMBOLS == 256:
+      bg = bytegen(enw)
     else:
-      bg, SYMBOLS = bitgen(enw), 2
+      bg = bitgen(enw)
     enc = Coder()
   else:
     enc = Coder(open(fn+".out", "rb").read())
@@ -31,7 +33,7 @@ def run(fn="enwik4", compress=True):
     ctw = model.ContextualSequenceModel(context_length=8)
   else:
     from model import CTW
-    ctw = CTW()
+    ctw = CTW(context_length=16)
 
   H = 0.0
   cnt = 0 
