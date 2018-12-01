@@ -71,8 +71,7 @@ class CTW(object):
     pn.update(s)
     after_s = pn.pw
     pn.update(s, True)
-    p_s = math.exp(after_s - prev)
-    return p_s
+    return after_s - prev
 
   def update(self, x):
     # increment tables

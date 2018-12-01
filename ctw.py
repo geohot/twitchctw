@@ -11,19 +11,28 @@ def bytegen(x):
   for c in x:
     yield c
 
-from model import CTW
 from coder import Coder
+
+CTS = False
 
 def run(fn="enwik4", compress=True):
   if compress:
     enw = open(fn, "rb").read()
-    bg = bitgen(enw)
-    #bg = bytegen(enw)
+    if CTS:
+      bg, SYMBOLS = bytegen(enw), 256
+    else:
+      bg, SYMBOLS = bitgen(enw), 2
     enc = Coder()
   else:
     enc = Coder(open(fn+".out", "rb").read())
 
-  ctw = CTW()
+  if CTS:
+    from cts import model
+    ctw = model.ContextualSequenceModel(context_length=8)
+  else:
+    from model import CTW
+    ctw = CTW()
+
   H = 0.0
   cnt = 0 
   stream = []
@@ -32,24 +41,26 @@ def run(fn="enwik4", compress=True):
       cnt += 1
 
       # what if a wild 0 appeared? this is wrong because creation might happen...
-      p_0 = ctw.log_prob(0)
+      p_s = []
+      for s in range(SYMBOLS):
+        p_s.append(math.exp(ctw.log_prob(s)))
+      assert (sum(p_s)-1.0) < 1e-6
 
       if compress:
         x = next(bg)
-        enc.code(p_0, x)
+        enc.code(p_s[0], x)
       else:
-        x = enc.code(p_0)
+        x = enc.code(p_s[0])
 
       stream.append(x)
-
-      p_x = p_0 if x == 0 else (1.0 - p_0)
-      H += -math.log2(p_x)
-
+      H += -math.log2(p_s[x])
       ctw.update(x)
 
-      if cnt % 5000 == 0:
-        ctw_bytes = (ctw.root.pw/math.log(2))/-8
-        print("%5d: ratio %.2f%%, %d nodes, %.2f bytes, %.2f ctw" % (cnt//8, H*100.0/cnt, len(ctw.nodes), H/8.0, ctw_bytes))
+      if cnt % (5000//math.log2(SYMBOLS)) == 0:
+        if CTS:
+          print("%5d: ratio %.2f%%, %.2f bytes" % (cnt, H*100.0/(cnt*math.log2(SYMBOLS)), H/8.0))
+        else:
+          print("%5d: ratio %.2f%%, %d nodes, %.2f bytes, %.2f ctw" % (cnt//8, H*100.0/cnt, len(ctw.nodes), H/8.0, (ctw.root.pw/math.log(2))/-8))
 
       # TODO: make this generic
       if not compress and cnt == 80000:
@@ -57,7 +68,7 @@ def run(fn="enwik4", compress=True):
   except StopIteration:
     pass
 
-  print("%.2f bytes of entropy, %d nodes, %d bits, %d bytes" % (H/8.0, len(ctw.nodes), len(stream), len(enc.ob)))
+  print("%.2f bytes of entropy, %d bits, %d bytes" % (H/8.0, len(stream), len(enc.ob)))
 
   if compress:
     with open(fn+".out", "wb") as f:
